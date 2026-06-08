@@ -18,7 +18,10 @@ const restaurantSchema = new mongoose.Schema(
       type: String,
       required: [true, "Restaurant image is required"],
     },
-
+    imagePublicId: {
+      type: String,
+      required: true,
+    },
     phone: {
       type: String,
       required: [true, "Phone number is required"],
