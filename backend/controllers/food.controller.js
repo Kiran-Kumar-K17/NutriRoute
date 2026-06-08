@@ -1,5 +1,6 @@
 import { Food } from "../models/food.model.js";
 import { Restaurant } from "../models/restaurant.model.js";
+import { uploadToCloudinary } from "../utils/uploadToCloudinary.js";
 
 export const createFood = async (req, res) => {
   try {
@@ -8,7 +9,6 @@ export const createFood = async (req, res) => {
       description,
       price,
       category,
-      image,
       restaurantId,
       stock,
       isAvailable,
@@ -26,12 +26,19 @@ export const createFood = async (req, res) => {
         error: "You are not the owner of this restaurant",
       });
     }
+    if (!req.file) {
+      return res.status(400).json({
+        error: "Restaurant image is required",
+      });
+    }
+
+    const uploadImage = await uploadToCloudinary(req.file.buffer, "foods");
     const food = await Food.create({
       name,
       description,
       price,
       category,
-      image,
+      image: uploadImage.secure_url,
       restaurantId,
       stock,
       isAvailable,

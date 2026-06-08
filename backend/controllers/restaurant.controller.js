@@ -1,11 +1,10 @@
 import { Restaurant } from "../models/restaurant.model.js";
-
+import { uploadToCloudinary } from "../utils/uploadToCloudinary.js";
 export const createRestaurant = async (req, res) => {
   try {
     const {
       name,
       description,
-      image,
       phone,
       email,
       address,
@@ -15,7 +14,8 @@ export const createRestaurant = async (req, res) => {
     } = req.body;
 
     const ownerId = req.user.id;
-
+    console.log("BODY:", req.body);
+    console.log("ADDRESS:", address);
     const existingRestaurant = await Restaurant.findOne({
       $or: [{ email }, { phone }],
     });
@@ -25,11 +25,21 @@ export const createRestaurant = async (req, res) => {
         error: "Restaurant already exists with this email or phone",
       });
     }
+    if (!req.file) {
+      return res.status(400).json({
+        error: "Restaurant image is required",
+      });
+    }
+
+    const uploadImage = await uploadToCloudinary(
+      req.file.buffer,
+      "restaurants",
+    );
 
     const restaurant = await Restaurant.create({
       name,
       description,
-      image,
+      image: uploadImage.secure_url,
       phone,
       email,
       address,
