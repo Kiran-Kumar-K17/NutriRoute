@@ -3,7 +3,7 @@ import { verifyToken } from "../utils/jwt.js";
 export const protect = (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
-    if (authHeader?.startsWith("Bearer ")) {
+    if (!authHeader?.startsWith("Bearer ")) {
       return res.status(401).json({
         message: "Unauthorized",
       });

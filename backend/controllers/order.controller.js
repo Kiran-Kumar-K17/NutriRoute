@@ -5,7 +5,14 @@ import { Restaurant } from "../models/restaurant.model.js";
 export const createOrder = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { restaurantId, items, deliveryAddress, paymentMethod } = req.body;
+    const {
+      restaurantId,
+      items,
+      deliveryAddress,
+      paymentMethod,
+      razorpay_order_id,
+      razorpay_payment_id,
+    } = req.body;
     if (!items || items.length === 0) {
       return res.status(400).json({
         error: "Order must contain at least one food item",
@@ -18,7 +25,11 @@ export const createOrder = async (req, res) => {
         error: "Restaurant not found",
       });
     }
-
+    if (restaurant.ownerId.toString() === userId) {
+      return res.status(403).json({
+        error: "Owners cannot order from their own restaurant.",
+      });
+    }
     let totalAmount = 0;
 
     const foodIds = items.map((item) => item.foodId);
@@ -50,21 +61,32 @@ export const createOrder = async (req, res) => {
       };
     });
 
+    const invalidFood = foods.find(
+      (food) => food.restaurantId.toString() !== restaurantId,
+    );
+
+    if (invalidFood) {
+      return res.status(400).json({
+        error: "Food item does not belong to this restaurant",
+      });
+    }
     const order = await Order.create({
-      user: req.user.id,
+      userId,
       restaurantId,
       items: orderedItems,
       totalAmount,
       paymentMethod,
       paymentStatus: paymentMethod === "COD" ? "Pending" : "Paid",
       deliveryAddress,
+      razorpayOrderId: razorpay_order_id || null,
+      paymentId: razorpay_payment_id || null,
       orderStatus: "Pending",
     });
 
     const populatedOrder = await Order.findById(order._id)
       .populate("userId", "name email phone")
       .populate("restaurantId", "name")
-      .populate("items.food", "name price image");
+      .populate("items.foodId", "name price image");
 
     return res.status(201).json({
       success: true,
