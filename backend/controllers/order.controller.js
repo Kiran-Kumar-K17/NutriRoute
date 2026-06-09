@@ -105,44 +105,57 @@ export const updateOrderStatus = async (req, res) => {
     const { orderId } = req.params;
     const { orderStatus } = req.body;
 
-    const allowedStatuses = [
-      "Pending",
-      "Accepted",
-      "Rejected",
-      "Preparing",
-      "Ready for Pickup",
-      "Assigned",
-      "Picked Up",
-      "Out for Delivery",
-      "Delivered",
-      "Cancelled",
-    ];
+    const order = await Order.findById(orderId);
 
-    if (!allowedStatuses.includes(orderStatus)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid order status",
-      });
-    }
-
-    const updateStatus = await Order.findByIdAndUpdate(
-      orderId,
-      {
-        $set: { orderStatus },
-      },
-      { returnDocument: "after", runValidators: true },
-    );
-
-    if (!updateStatus) {
+    if (!order) {
       return res.status(404).json({
         success: false,
         message: "Order not found",
       });
     }
 
+    const role = req.user.role;
+
+    const transitions = {
+      Pending: ["Accepted", "Rejected", "Cancelled"],
+      Accepted: ["Preparing"],
+      Preparing: ["Ready for Pickup"],
+      "Ready for Pickup": ["Picked Up"],
+      "Picked Up": ["Out for Delivery"],
+      "Out for Delivery": ["Delivered"],
+      Delivered: [],
+      Rejected: [],
+      Cancelled: [],
+    };
+
+    const permissions = {
+      restaurant: ["Accepted", "Rejected", "Preparing", "Ready for Pickup"],
+      delivery: ["Picked Up", "Out for Delivery", "Delivered"],
+      customer: ["Cancelled"],
+    };
+
+    if (!permissions[role].includes(orderStatus)) {
+      return res.status(403).json({
+        success: false,
+        message: `Role '${role}' cannot set status '${orderStatus}'`,
+      });
+    }
+
+    const allowedNextStatuses = transitions[order.orderStatus] || [];
+
+    if (!allowedNextStatuses.includes(orderStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot change status from '${order.orderStatus}' to '${orderStatus}'`,
+      });
+    }
+    order.orderStatus = orderStatus;
+    await order.save();
+
     return res.status(200).json({
       success: true,
-      message: `Order ${orderStatus} successfully`,
+      message: `Order status updated to ${orderStatus}`,
+      order,
     });
   } catch (error) {
     return res.status(500).json({

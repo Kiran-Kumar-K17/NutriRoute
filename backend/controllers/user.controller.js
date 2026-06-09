@@ -58,7 +58,7 @@ export const loginUser = async (req, res) => {
 
     const response = user.toObject();
     delete response.password;
-    const token = generateToken(user._id);
+    const token = generateToken(user._id, user.role);
     res.status(200).json({
       message: "Login successful",
       response,
