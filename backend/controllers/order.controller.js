@@ -99,3 +99,55 @@ export const createOrder = async (req, res) => {
     });
   }
 };
+
+export const updateOrderStatus = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { orderStatus } = req.body;
+
+    const allowedStatuses = [
+      "Pending",
+      "Accepted",
+      "Rejected",
+      "Preparing",
+      "Ready for Pickup",
+      "Assigned",
+      "Picked Up",
+      "Out for Delivery",
+      "Delivered",
+      "Cancelled",
+    ];
+
+    if (!allowedStatuses.includes(orderStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid order status",
+      });
+    }
+
+    const updateStatus = await Order.findByIdAndUpdate(
+      orderId,
+      {
+        $set: { orderStatus },
+      },
+      { returnDocument: "after", runValidators: true },
+    );
+
+    if (!updateStatus) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Order ${orderStatus} successfully`,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+};

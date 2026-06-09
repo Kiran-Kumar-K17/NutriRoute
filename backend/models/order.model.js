@@ -80,7 +80,11 @@ const orderSchema = new mongoose.Schema(
       enum: [
         "Pending",
         "Accepted",
+        "Rejected",
         "Preparing",
+        "Ready for Pickup",
+        "Assigned",
+        "Picked Up",
         "Out for Delivery",
         "Delivered",
         "Cancelled",
