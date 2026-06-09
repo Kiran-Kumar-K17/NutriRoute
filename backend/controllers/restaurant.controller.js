@@ -14,8 +14,7 @@ export const createRestaurant = async (req, res) => {
     } = req.body;
 
     const ownerId = req.user.id;
-    console.log("BODY:", req.body);
-    console.log("ADDRESS:", address);
+
     const existingRestaurant = await Restaurant.findOne({
       $or: [{ email }, { phone }],
     });
@@ -40,6 +39,7 @@ export const createRestaurant = async (req, res) => {
       name,
       description,
       image: uploadImage.secure_url,
+      imagePublicId: uploadImage.public_id,
       phone,
       email,
       address,

@@ -68,14 +68,14 @@ export const updateFood = async (req, res) => {
         error: "Food not found",
       });
     }
-
+    console.log(food);
     if (!food.restaurantId) {
       return res.status(404).json({
         error: "Restaurant not found",
       });
     }
 
-    if (food.restaurant.ownerId.toString() !== req.user.id) {
+    if (food.restaurantId.ownerId.toString() !== req.user.id) {
       return res.status(403).json({
         error: "You are not the owner of this restaurant",
       });
@@ -87,12 +87,12 @@ export const updateFood = async (req, res) => {
       if (food.imagePublicId) {
         await deleteFromCloudinary(food.imagePublicId);
       }
+      const uploadImage = await uploadToCloudinary(req.file.buffer, "foods");
+
+      food.image = uploadImage.secure_url;
+      food.imagePublicId = uploadImage.public_id;
     }
 
-    const uploadImage = await uploadToCloudinary(req.file.buffer, "foods");
-
-    food.image = uploadImage.secure_url;
-    food.imagePublicId = uploadImage.public_id;
     food.name = name ?? food.name;
     food.description = description ?? food.description;
     food.price = price ?? food.price;
@@ -131,7 +131,7 @@ export const deleteFood = async (req, res) => {
       });
     }
 
-    if (restaurant.ownerId.toString() !== req.user.id) {
+    if (food.restaurantId.ownerId.toString() !== req.user.id) {
       return res.status(403).json({
         error: "You are not the owner of this restaurant",
       });
