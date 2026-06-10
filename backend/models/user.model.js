@@ -54,9 +54,18 @@ const userSchema = new mongoose.Schema(
       pincode: { type: String, required: [true, "Pincode is required"] },
     },
     currentLocation: {
-      latitude: Number,
-      longitude: Number,
-      updatedAt: Date,
+      lat: {
+        type: Number,
+        default: null,
+      },
+      lng: {
+        type: Number,
+        default: null,
+      },
+      updatedAt: {
+        type: Date,
+        default: null,
+      },
     },
   },
   {

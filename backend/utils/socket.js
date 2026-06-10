@@ -1,4 +1,6 @@
 import { Server } from "socket.io";
+import { User } from "../models/user.model.js";
+import { Order } from "../models/order.model.js";
 
 let io;
 
@@ -8,6 +10,63 @@ export const initializeSocket = (server) => {
       origin: "http://localhost:5173",
       credentials: true,
     },
+  });
+
+  io.on("connection", (socket) => {
+    console.log("Connected:", socket.id);
+
+    socket.on("join-order-room", (orderId) => {
+      socket.join(orderId);
+    });
+
+    socket.on("location-update", async (data) => {
+      try {
+        console.log("LOCATION RECEIVED:", data);
+
+        const { orderId, latitude, longitude } = data;
+
+        const order = await Order.findById(orderId);
+
+        console.log("ORDER FOUND:", order?._id);
+
+        if (!order) {
+          console.log("ORDER NOT FOUND");
+          return;
+        }
+
+        console.log("DELIVERY PARTNER:", order.deliveryPartnerId);
+
+        if (!order.deliveryPartnerId) {
+          console.log("NO DELIVERY PARTNER");
+          return;
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(
+          order.deliveryPartnerId,
+          {
+            currentLocation: {
+              lat: latitude,
+              lng: longitude,
+              updatedAt: new Date(),
+            },
+          },
+          { new: true },
+        );
+
+        console.log("UPDATED USER:", updatedUser.currentLocation);
+
+        io.to(orderId).emit("driver-location", {
+          latitude,
+          longitude,
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    });
+
+    socket.on("disconnect", () => {
+      console.log("Disconnected:", socket.id);
+    });
   });
 
   return io;

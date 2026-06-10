@@ -1,52 +1,101 @@
 import { useEffect, useState } from "react";
 import { socket } from "./lib/socket";
 
-const ORDER_ID = "YOUR_ORDER_ID";
+const ORDER_ID = "6a292733635997572797015e";
 
-const App = () => {
-  const [status, setStatus] = useState("Waiting...");
+function App() {
   const [location, setLocation] = useState(null);
+  const [status, setStatus] = useState("Waiting for GPS...");
+  const [watchId, setWatchId] = useState(null);
 
   useEffect(() => {
-    const fetchOrder = async () => {
-      const res = await fetch.get(`/api/orders/${ORDER_ID}/tracking`);
+    socket.connect();
 
-      setStatus(res.data.orderStatus);
+    socket.emit("join-order-room", ORDER_ID);
 
-      if (res.data.location) {
-        setLocation(res.data.location);
-      }
+    socket.on("driver-location", (data) => {
+      console.log("Location received:", data);
+      setLocation(data);
+    });
+
+    return () => {
+      socket.off("driver-location");
     };
-
-    fetchOrder();
   }, []);
 
-  const sendFakeLocation = () => {
-    socket.emit("location-update", {
-      orderId: ORDER_ID,
-      latitude: 12.9716,
-      longitude: 77.5946,
-    });
+  const startTracking = () => {
+    if (!navigator.geolocation) {
+      alert("Geolocation not supported");
+      return;
+    }
+
+    const id = navigator.geolocation.watchPosition(
+      (position) => {
+        const latitude = position.coords.latitude;
+        const longitude = position.coords.longitude;
+
+        console.log("Sending:", latitude, longitude);
+
+        setStatus("Tracking...");
+
+        socket.emit("location-update", {
+          orderId: ORDER_ID,
+          latitude,
+          longitude,
+        });
+      },
+      (error) => {
+        console.error(error);
+        setStatus(error.message);
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 10000,
+      },
+    );
+
+    setWatchId(id);
+  };
+
+  const stopTracking = () => {
+    if (watchId) {
+      navigator.geolocation.clearWatch(watchId);
+      setStatus("Tracking Stopped");
+    }
   };
 
   return (
-    <div>
-      <h1>Order Tracking</h1>
+    <div style={{ padding: "20px" }}>
+      <h1>Food Delivery GPS Test</h1>
 
-      <h2>Status: {status}</h2>
+      <h3>{status}</h3>
 
-      <button onClick={sendFakeLocation}>Send Fake Location</button>
+      <button onClick={startTracking}>Start GPS Tracking</button>
 
-      <h3>Driver Location</h3>
+      <button onClick={stopTracking} style={{ marginLeft: "10px" }}>
+        Stop GPS Tracking
+      </button>
 
-      {location && (
+      <hr />
+
+      <h2>Latest Location</h2>
+
+      {location ? (
         <>
-          <p>Latitude: {location.latitude}</p>
-          <p>Longitude: {location.longitude}</p>
+          <p>
+            <strong>Latitude:</strong> {location.latitude}
+          </p>
+
+          <p>
+            <strong>Longitude:</strong> {location.longitude}
+          </p>
         </>
+      ) : (
+        <p>No location received yet.</p>
       )}
     </div>
   );
-};
+}
 
 export default App;
