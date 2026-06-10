@@ -1,99 +1,101 @@
 import { useEffect, useState } from "react";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+
+import "leaflet/dist/leaflet.css";
+import "./lib/leafletIcon";
 import { socket } from "./lib/socket";
 
-const ORDER_ID = "6a292733635997572797015e";
+function RecenterMap({ lat, lng }) {
+  const map = useMap();
+
+  useEffect(() => {
+    map.setView([lat, lng], map.getZoom());
+  }, [lat, lng, map]);
+
+  return null;
+}
 
 function App() {
-  const [location, setLocation] = useState(null);
-  const [status, setStatus] = useState("Waiting for GPS...");
-  const [watchId, setWatchId] = useState(null);
-
+  const [location, setLocation] = useState({
+    lat: 12.9716,
+    lng: 77.5946,
+  });
+  const ORDER_ID = "6a292733635997572797015e";
   useEffect(() => {
     socket.connect();
 
-    socket.emit("join-order-room", ORDER_ID);
+    socket.on("connect", () => {
+      console.log("Socket Connected:", socket.id);
+
+      socket.emit("join-order-room", ORDER_ID);
+    });
 
     socket.on("driver-location", (data) => {
-      console.log("Location received:", data);
-      setLocation(data);
+      console.log("Live Location:", data);
+
+      setLocation({
+        lat: data.latitude,
+        lng: data.longitude,
+      });
     });
 
     return () => {
       socket.off("driver-location");
+      socket.disconnect();
     };
   }, []);
 
-  const startTracking = () => {
-    if (!navigator.geolocation) {
-      alert("Geolocation not supported");
-      return;
-    }
-
-    const id = navigator.geolocation.watchPosition(
-      (position) => {
-        const latitude = position.coords.latitude;
-        const longitude = position.coords.longitude;
-
-        console.log("Sending:", latitude, longitude);
-
-        setStatus("Tracking...");
-
-        socket.emit("location-update", {
-          orderId: ORDER_ID,
-          latitude,
-          longitude,
-        });
-      },
-      (error) => {
-        console.error(error);
-        setStatus(error.message);
-      },
-      {
-        enableHighAccuracy: true,
-        maximumAge: 0,
-        timeout: 10000,
-      },
-    );
-
-    setWatchId(id);
-  };
-
-  const stopTracking = () => {
-    if (watchId) {
-      navigator.geolocation.clearWatch(watchId);
-      setStatus("Tracking Stopped");
-    }
-  };
-
   return (
-    <div style={{ padding: "20px" }}>
-      <h1>Food Delivery GPS Test</h1>
-
-      <h3>{status}</h3>
-
-      <button onClick={startTracking}>Start GPS Tracking</button>
-
-      <button onClick={stopTracking} style={{ marginLeft: "10px" }}>
-        Stop GPS Tracking
+    <div
+      style={{
+        height: "100vh",
+        width: "100%",
+      }}
+    >
+      <button
+        onClick={() => {
+          socket.emit("location-update", {
+            orderId: ORDER_ID,
+            latitude: 12.975,
+            longitude: 77.599,
+          });
+        }}
+        style={{
+          position: "absolute",
+          top: 10,
+          left: 10,
+          zIndex: 1000,
+        }}
+      >
+        Send Test Location
       </button>
+      <MapContainer
+        center={[location.lat, location.lng]}
+        zoom={15}
+        style={{
+          height: "100%",
+          width: "100%",
+        }}
+      >
+        <TileLayer
+          attribution="&copy; OpenStreetMap contributors"
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
 
-      <hr />
+        <RecenterMap lat={location.lat} lng={location.lng} />
 
-      <h2>Latest Location</h2>
+        <Marker position={[location.lat, location.lng]}>
+          <Popup>
+            <div>
+              <h3>Delivery Partner</h3>
 
-      {location ? (
-        <>
-          <p>
-            <strong>Latitude:</strong> {location.latitude}
-          </p>
+              <p>Latitude: {location.lat}</p>
 
-          <p>
-            <strong>Longitude:</strong> {location.longitude}
-          </p>
-        </>
-      ) : (
-        <p>No location received yet.</p>
-      )}
+              <p>Longitude: {location.lng}</p>
+            </div>
+          </Popup>
+        </Marker>
+      </MapContainer>
     </div>
   );
 }

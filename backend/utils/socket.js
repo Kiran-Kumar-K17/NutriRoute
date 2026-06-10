@@ -1,3 +1,5 @@
+// utils/socket.js
+
 import { Server } from "socket.io";
 import { User } from "../models/user.model.js";
 import { Order } from "../models/order.model.js";
@@ -17,6 +19,7 @@ export const initializeSocket = (server) => {
 
     socket.on("join-order-room", (orderId) => {
       socket.join(orderId);
+      console.log("JOINED ROOM:", orderId);
     });
 
     socket.on("location-update", async (data) => {
@@ -27,14 +30,10 @@ export const initializeSocket = (server) => {
 
         const order = await Order.findById(orderId);
 
-        console.log("ORDER FOUND:", order?._id);
-
         if (!order) {
           console.log("ORDER NOT FOUND");
           return;
         }
-
-        console.log("DELIVERY PARTNER:", order.deliveryPartnerId);
 
         if (!order.deliveryPartnerId) {
           console.log("NO DELIVERY PARTNER");
@@ -53,12 +52,14 @@ export const initializeSocket = (server) => {
           { new: true },
         );
 
-        console.log("UPDATED USER:", updatedUser.currentLocation);
+        console.log("UPDATED USER LOCATION:", updatedUser.currentLocation);
 
         io.to(orderId).emit("driver-location", {
           latitude,
           longitude,
         });
+
+        console.log("EMITTED TO ROOM:", orderId);
       } catch (error) {
         console.error(error);
       }
