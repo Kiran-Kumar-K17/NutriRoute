@@ -1,6 +1,8 @@
 import { Order } from "../models/order.model.js";
 import { Food } from "../models/food.model.js";
+import { User } from "../models/user.model.js";
 import { Restaurant } from "../models/restaurant.model.js";
+import { getIO } from "../utils/socket.js";
 
 export const createOrder = async (req, res) => {
   try {
@@ -152,9 +154,104 @@ export const updateOrderStatus = async (req, res) => {
     order.orderStatus = orderStatus;
     await order.save();
 
+    const io = getIO();
+
+    io.to(order._id.toString()).emit("order-status-updated", {
+      orderId: order._id,
+      orderStatus,
+    });
+
     return res.status(200).json({
       success: true,
       message: `Order status updated to ${orderStatus}`,
+      order,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+};
+
+export const getOrderTracking = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    const order = await Order.findById(orderId).populate(
+      "deliveryPartnerId",
+      "name phone currentLocation",
+    );
+    console.log("Delivery Partner ID:", order.deliveryPartnerId);
+    const allowedStatuses = ["Picked Up", "Out for Delivery"];
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+    if (order.userId.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+    if (!allowedStatuses.includes(order.orderStatus)) {
+      return res.status(200).json({
+        success: true,
+        orderStatus: order.orderStatus,
+        location: null,
+      });
+    }
+    return res.status(200).json({
+      success: true,
+      orderStatus: order.orderStatus,
+      location: order.deliveryPartnerId?.currentLocation || null,
+      deliveryPartner: order.deliveryPartnerId
+        ? {
+            name: order.deliveryPartnerId.name,
+            phone: order.deliveryPartnerId.phone,
+          }
+        : null,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+};
+
+export const assignDeliveryPartner = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { deliveryPartnerId } = req.body;
+
+    const order = await Order.findById(orderId);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    const deliveryUser = await User.findById(deliveryPartnerId);
+
+    if (!deliveryUser || deliveryUser.role !== "delivery") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid delivery partner",
+      });
+    }
+
+    order.deliveryPartnerId = deliveryUser._id;
+    order.orderStatus = "Assigned";
+    await order.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Delivery partner assigned",
       order,
     });
   } catch (error) {

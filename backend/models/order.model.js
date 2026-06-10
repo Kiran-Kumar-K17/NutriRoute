@@ -102,6 +102,10 @@ const orderSchema = new mongoose.Schema(
     transactionId: {
       type: String,
     },
+    deliveryPartnerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
   },
   {
     timestamps: true,
