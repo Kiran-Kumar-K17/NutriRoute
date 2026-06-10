@@ -151,3 +151,19 @@ export const deleteFood = async (req, res) => {
     });
   }
 };
+export const getAllFoods = async (req, res) => {
+  try {
+    const foods = await Food.find().populate(
+      "restaurantId",
+      "name description",
+    );
+    return res.status(200).json({
+      success: true,
+      foods,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      error: error.message,
+    });
+  }
+};

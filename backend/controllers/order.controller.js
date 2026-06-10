@@ -11,6 +11,7 @@ export const createOrder = async (req, res) => {
       restaurantId,
       items,
       deliveryAddress,
+      deliveryLocation,
       paymentMethod,
       razorpay_order_id,
       razorpay_payment_id,
@@ -80,6 +81,7 @@ export const createOrder = async (req, res) => {
       paymentMethod,
       paymentStatus: paymentMethod === "COD" ? "Pending" : "Paid",
       deliveryAddress,
+      deliveryLocation,
       razorpayOrderId: razorpay_order_id || null,
       paymentId: razorpay_payment_id || null,
       orderStatus: "Pending",
@@ -182,31 +184,23 @@ export const getOrderTracking = async (req, res) => {
       "deliveryPartnerId",
       "name phone currentLocation",
     );
-    console.log("Delivery Partner ID:", order.deliveryPartnerId);
-    const allowedStatuses = ["Picked Up", "Out for Delivery"];
+
     if (!order) {
       return res.status(404).json({
         success: false,
         message: "Order not found",
       });
     }
-    if (order.userId.toString() !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        message: "Unauthorized",
-      });
-    }
-    if (!allowedStatuses.includes(order.orderStatus)) {
-      return res.status(200).json({
-        success: true,
-        orderStatus: order.orderStatus,
-        location: null,
-      });
-    }
+
     return res.status(200).json({
       success: true,
+
       orderStatus: order.orderStatus,
-      location: order.deliveryPartnerId?.currentLocation || null,
+
+      customerLocation: order.deliveryLocation,
+
+      driverLocation: order.deliveryPartnerId?.currentLocation || null,
+
       deliveryPartner: order.deliveryPartnerId
         ? {
             name: order.deliveryPartnerId.name,
@@ -217,7 +211,7 @@ export const getOrderTracking = async (req, res) => {
   } catch (error) {
     return res.status(500).json({
       success: false,
-      error: error.message,
+      message: error.message,
     });
   }
 };

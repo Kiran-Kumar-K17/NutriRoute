@@ -4,9 +4,14 @@ import paymentRoutes from "./routes/payment.routes.js";
 import restaurantRoutes from "./routes/restaurant.route.js";
 import orderRoutes from "./routes/order.routes.js";
 import foodRoutes from "./routes/food.routes.js";
-
+import cors from "cors";
 const app = express();
 app.use(express.json());
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+  }),
+);
 app.get("/", (req, res) => {
   res.send("Backend Working..");
 });
