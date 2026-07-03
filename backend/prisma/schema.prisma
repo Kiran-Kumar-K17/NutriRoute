@@ -1,14 +1,112 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+model User {
+  id             String       @id @default(uuid())
+  name           String
+  email          String       @unique
+  password       String
+  phone          String       @unique @db.VarChar(10)
+  role           UserRole     @default(CUSTOMER)
+  street         String
+  village        String
+  city           String
+  pincode        String       @db.VarChar(6)
+  latitude       Float?
+  longitude      Float?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  customerOrders Order[]      @relation("CustomerOrders")
+  deliveryOrders Order[]      @relation("DeliveryOrders")
+  restaurants    Restaurant[]
+}
+
+model Restaurant {
+  id            String   @id @default(uuid())
+  name          String
+  description   String
+  image         String
+  imagePublicId String
+  phone         String   @unique @db.VarChar(10)
+  email         String   @unique
+  street        String
+  area          String
+  city          String
+  state         String
+  pincode       String   @db.VarChar(6)
+  cuisine       String[]
+  openingTime   String
+  closingTime   String
+  rating        Float    @default(0)
+  totalReviews  Int      @default(0)
+  isOpen        Boolean  @default(true)
+  ownerId       String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  foods         Food[]
+  orders        Order[]
+  owner         User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+}
+
+model Order {
+  id                String        @id @default(uuid())
+  customerId        String
+  restaurantId      String
+  deliveryPartnerId String?
+  totalAmount       Decimal       @db.Decimal(10, 2)
+  street            String
+  village           String
+  city              String
+  pincode           String
+  paymentMethod     PaymentMethod @default(COD)
+  paymentStatus     PaymentStatus @default(PENDING)
+  orderStatus       OrderStatus   @default(PENDING)
+  paymentId         String?
+  razorpayOrderId   String?
+  transactionId     String?
+  latitude          Float?
+  longitude         Float?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  customer          User          @relation("CustomerOrders", fields: [customerId], references: [id], onDelete: Cascade)
+  deliveryPartner   User?         @relation("DeliveryOrders", fields: [deliveryPartnerId], references: [id])
+  restaurant        Restaurant    @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  items             OrderItem[]
+}
+
+model OrderItem {
+  id        String   @id @default(uuid())
+  orderId   String
+  foodId    String
+  quantity  Int
+  price     Decimal  @db.Decimal(10, 2)
+  createdAt DateTime @default(now())
+  food      Food     @relation(fields: [foodId], references: [id], onDelete: Cascade)
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model Food {
+  id            String      @id @default(uuid())
+  name          String      @db.VarChar(100)
+  description   String
+  price         Decimal     @db.Decimal(10, 2)
+  image         String
+  imagePublicId String
+  category      String      @db.VarChar(50)
+  stock         Int         @default(100)
+  isAvailable   Boolean     @default(true)
+  restaurantId  String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  restaurant    Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  orderItems    OrderItem[]
+
+  @@index([restaurantId])
 }
 
 enum UserRole {
@@ -39,120 +137,4 @@ enum OrderStatus {
   OUT_FOR_DELIVERY
   DELIVERED
   CANCELLED
-}
-
-model User {
-  id             String       @id @default(uuid())
-  name           String
-  email          String       @unique
-  password       String
-  phone          String       @unique @db.VarChar(10)
-  role           UserRole     @default(CUSTOMER)
-  street         String
-  village        String
-  city           String
-  pincode        String       @db.VarChar(6)
-  latitude       Float?
-  longitude      Float?
-  restaurants    Restaurant[]
-  customerOrders Order[]      @relation("CustomerOrders")
-  deliveryOrders Order[]      @relation("DeliveryOrders")
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Restaurant {
-  id            String   @id @default(uuid())
-  name          String
-  description   String
-  image         String
-  imagePublicId String
-  phone         String   @unique @db.VarChar(10)
-  email         String   @unique
-  street        String
-  area          String
-  city          String
-  state         String
-  pincode       String   @db.VarChar(6)
-  cuisine       String[]
-  openingTime   String
-  closingTime   String
-  rating        Float    @default(0)
-  totalReviews  Int      @default(0)
-  isOpen        Boolean  @default(true)
-  ownerId       String
-  owner         User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  foods         Food[]
-  orders        Order[]
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-}
-
-model Order {
-  id                String        @id @default(uuid())
-  customerId        String
-  customer          User          @relation("CustomerOrders", fields: [customerId], references: [id], onDelete: Cascade)
-  restaurantId      String
-  restaurant        Restaurant    @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  deliveryPartnerId String?
-  deliveryPartner   User?         @relation("DeliveryOrders", fields: [deliveryPartnerId], references: [id])
-  items             OrderItem[]
-  totalAmount       Decimal       @db.Decimal(10, 2)
-  street            String
-  village           String
-  city              String
-  pincode           String
-  paymentMethod     PaymentMethod @default(COD)
-  paymentStatus     PaymentStatus @default(PENDING)
-  orderStatus       OrderStatus   @default(PENDING)
-  paymentId         String?
-  razorpayOrderId   String?
-  transactionId     String?
-
-  latitude  Float?
-  longitude Float?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model OrderItem {
-  id String @id @default(uuid())
-
-  orderId String
-  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
-
-  foodId String
-  food   Food   @relation(fields: [foodId], references: [id], onDelete: Cascade)
-
-  quantity Int
-  price    Decimal @db.Decimal(10, 2)
-
-  createdAt DateTime @default(now())
-}
-
-model Food {
-  id String @id @default(uuid())
-
-  name        String @db.VarChar(100)
-  description String
-
-  price Decimal @db.Decimal(10, 2)
-
-  image         String
-  imagePublicId String
-
-  category String @db.VarChar(50)
-
-  stock Int @default(100)
-
-  isAvailable  Boolean     @default(true)
-  restaurantId String
-  restaurant   Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  orderItems   OrderItem[]
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-
-  @@index([restaurantId])
 }

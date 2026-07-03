@@ -1,20 +1,39 @@
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import { generateToken } from "../utils/jwt.js";
 import * as authService from "../services/auth.service.js";
 
-export const registerUser = async (req: Request, res: Response) => {
+export const registerUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
-    const user = await authService.register(req.body);
+    const result = await authService.register(req.body);
     return res.status(201).json({
+      ...result,
       success: true,
-      user,
+      message: "Registration successful",
     });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Internal Server Error";
-    return res.status(400).json({
-      success: false,
-      message,
+    console.log(error);
+    next(error);
+  }
+};
+
+export const loginUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const result = await authService.login(req.body);
+    return res.status(200).json({
+      ...result,
+      success: true,
+      message: "Login successful",
     });
+  } catch (error) {
+    console.log(error);
+    next(error);
   }
 };
