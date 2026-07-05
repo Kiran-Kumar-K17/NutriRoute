@@ -7,23 +7,23 @@ datasource db {
 }
 
 model User {
-  id             String       @id @default(uuid())
+  id             String      @id @default(uuid())
   name           String
-  email          String       @unique
+  email          String      @unique
   password       String
-  phone          String       @unique @db.VarChar(10)
-  role           UserRole     @default(CUSTOMER)
+  phone          String      @unique @db.VarChar(10)
+  role           UserRole    @default(CUSTOMER)
   street         String
   village        String
   city           String
-  pincode        String       @db.VarChar(6)
+  pincode        String      @db.VarChar(6)
   latitude       Float?
   longitude      Float?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  customerOrders Order[]      @relation("CustomerOrders")
-  deliveryOrders Order[]      @relation("DeliveryOrders")
-  restaurants    Restaurant[]
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  customerOrders Order[]     @relation("CustomerOrders")
+  deliveryOrders Order[]     @relation("DeliveryOrders")
+  restaurants    Restaurant?
 }
 
 model Restaurant {
@@ -45,7 +45,7 @@ model Restaurant {
   rating        Float    @default(0)
   totalReviews  Int      @default(0)
   isOpen        Boolean  @default(true)
-  ownerId       String
+  ownerId       String   @unique
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   foods         Food[]

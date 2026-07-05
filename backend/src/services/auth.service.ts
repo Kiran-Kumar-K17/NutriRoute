@@ -5,7 +5,6 @@ import { generateToken } from "../utils/jwt.js";
 
 export const register = async (data: unknown) => {
   const parsedData = registerSchema.parse(data);
-
   const existingUser = await prisma.user.findFirst({
     where: {
       OR: [{ email: parsedData.email }, { phone: parsedData.phone }],
