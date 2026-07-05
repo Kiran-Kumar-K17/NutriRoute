@@ -1,7 +1,12 @@
 import { RestaurantSchema } from "../validators/restaurant.validator.js";
 import prisma from "../config/prisma.js";
+import { uploadToCloudinary } from "../utils/uploadToCloudinary.js";
 
-export const createRestaurant = async (data: unknown, ownerId: string) => {
+export const createRestaurant = async (
+  data: unknown,
+  file: Express.Multer.File | undefined,
+  ownerId: string,
+) => {
   const parsedData = RestaurantSchema.parse(data);
   const existingRestaurant = await prisma.restaurant.findUnique({
     where: {
@@ -26,35 +31,46 @@ export const createRestaurant = async (data: unknown, ownerId: string) => {
       throw new Error("Restaurant phone already exists.");
     }
   }
+  if (!file) {
+    throw new Error("Restaurant image is required.");
+  }
+
+  const { secure_url, public_id } = await uploadToCloudinary(
+    file,
+    "restaurants",
+  );
 
   const restaurant = await prisma.restaurant.create({
     data: {
       name: parsedData.name,
       description: parsedData.description,
-
-      image: "",
-      imagePublicId: "",
-
+      image: secure_url,
+      imagePublicId: public_id,
       phone: parsedData.phone,
       email: parsedData.email,
-
       street: parsedData.street,
       area: parsedData.area,
       city: parsedData.city,
       state: parsedData.state,
       pincode: parsedData.pincode,
-
       cuisine: parsedData.cuisine,
-
       openingTime: parsedData.openingTime,
       closingTime: parsedData.closingTime,
-
       ownerId,
     },
   });
   return {
-    success: true,
-    message: "Restaurant created successfully",
     restaurant,
+  };
+};
+
+export const getAllRestaurants = async () => {
+  const restaurants = await prisma.restaurant.findMany({
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+  return {
+    restaurants,
   };
 };
