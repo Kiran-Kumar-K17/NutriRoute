@@ -1,6 +1,8 @@
 import { RestaurantSchema } from "../validators/restaurant.validator.js";
 import prisma from "../config/prisma.js";
 import { uploadToCloudinary } from "../utils/uploadToCloudinary.js";
+import { deleteFromCloudinary } from "../utils/deleteFromCloudinary.js";
+import { updateRestaurantSchema } from "../validators/restaurant_update.validator.js";
 
 export const createRestaurant = async (
   data: unknown,
@@ -73,4 +75,88 @@ export const getAllRestaurants = async () => {
   return {
     restaurants,
   };
+};
+
+export const getRestaurantById = async (id: string) => {
+  const restaurant = await prisma.restaurant.findUnique({
+    where: {
+      id,
+    },
+    include: {
+      foods: true,
+    },
+  });
+
+  if (!restaurant) {
+    throw new Error("Restaurant not found.");
+  }
+
+  return restaurant;
+};
+export const getMyRestaurant = async (ownerId: string) => {
+  const restaurant = await prisma.restaurant.findUnique({
+    where: {
+      ownerId,
+    },
+    include: {
+      foods: true,
+    },
+  });
+  return restaurant;
+};
+
+export const updateRestaurant = async (
+  ownerId: string,
+  data: unknown,
+  file: Express.Multer.File | undefined,
+) => {
+  const parsedData = updateRestaurantSchema.parse(data);
+
+  const restaurant = await prisma.restaurant.findFirst({
+    where: {
+      ownerId,
+    },
+  });
+  if (!restaurant) {
+    throw new Error("Restaurant not found.");
+  }
+  let image = restaurant.image;
+  let imagePublicId = restaurant.imagePublicId;
+
+  if (file) {
+    await deleteFromCloudinary(restaurant.imagePublicId);
+    const uploadedImage = await uploadToCloudinary(file, "restaurants");
+    image = uploadedImage.secure_url;
+    imagePublicId = uploadedImage.public_id;
+  }
+  const updatedRestaurant = await prisma.restaurant.update({
+    where: {
+      id: restaurant.id,
+    },
+    data: {
+      ...parsedData,
+      image,
+      imagePublicId,
+    },
+  });
+  return updatedRestaurant;
+};
+
+export const deleteRestaurant = async (ownerId: string) => {
+  const restaurant = await prisma.restaurant.findFirst({
+    where: {
+      ownerId,
+    },
+  });
+  if (!restaurant) {
+    throw new Error("Restaurant not found.");
+  }
+  if (restaurant.imagePublicId) {
+    await deleteFromCloudinary(restaurant.imagePublicId);
+  }
+  await prisma.restaurant.delete({
+    where: {
+      id: restaurant.id,
+    },
+  });
 };
