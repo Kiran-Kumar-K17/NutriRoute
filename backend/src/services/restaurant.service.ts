@@ -1,8 +1,10 @@
-import { RestaurantSchema } from "../validators/restaurant.validator.js";
+import {
+  RestaurantSchema,
+  UpdateRestaurantSchema,
+} from "../validators/restaurant.validator.js";
 import prisma from "../config/prisma.js";
 import { uploadToCloudinary } from "../utils/uploadToCloudinary.js";
 import { deleteFromCloudinary } from "../utils/deleteFromCloudinary.js";
-import { updateRestaurantSchema } from "../validators/restaurant_update.validator.js";
 
 export const createRestaurant = async (
   data: unknown,
@@ -110,7 +112,7 @@ export const updateRestaurant = async (
   data: unknown,
   file: Express.Multer.File | undefined,
 ) => {
-  const parsedData = updateRestaurantSchema.parse(data);
+  const parsedData = UpdateRestaurantSchema.parse(data);
 
   const restaurant = await prisma.restaurant.findFirst({
     where: {

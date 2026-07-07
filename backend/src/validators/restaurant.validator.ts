@@ -27,3 +27,5 @@ export const RestaurantSchema = z.object({
 });
 
 export type RestaurantInput = z.infer<typeof RestaurantSchema>;
+
+export const UpdateRestaurantSchema = RestaurantSchema.partial();
