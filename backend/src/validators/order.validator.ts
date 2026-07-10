@@ -22,3 +22,13 @@ export const OrderSchema = z.object({
 });
 
 export type OrderSchemaInput = z.infer<typeof OrderSchema>;
+
+export const VerifyPaymentSchema = z.object({
+  orderId: z.string().uuid(),
+  razorpayOrderId: z.string().min(1),
+  razorpayPaymentId: z.string().min(1),
+  razorpaySignature: z.string().min(1),
+});
+
+export type VerifyPaymentInput = z.infer<typeof VerifyPaymentSchema>;
+
